@@ -2,6 +2,9 @@
 # Prepare files needed for flashing a Apalis/Colibri iMX6 module
 #
 # inspired by meta-fsl-arm/classes/image_types_fsl.bbclass
+#
+# Modified by Spiri, to create a flash disk from a yocto build.
+# Clone script repo into your build dir (e.g. 'build-apalis-imx6/')
 
 # exit on error
 set -e
@@ -72,6 +75,7 @@ UBOOT_RECOVERY=0
 # No devicetree by default
 KERNEL_DEVICETREE=""
 KERNEL_IMAGETYPE="uImage"
+YOCTO_IMAGE_PATH=../tmp/deploy/images/apalis-imx6
 
 while getopts "cdfho:" Option ; do
 	case $Option in
@@ -105,46 +109,35 @@ if [ ! -d "$OUT_DIR" ] && [ "$UBOOT_RECOVERY" = "0" ] ; then
 	exit 1
 fi
 
-# auto detect MODTYPE from rootfs directory
-CNT=`grep -ic "Colibri.iMX6" rootfs/etc/issue || true`
-if [ "$CNT" -ge 1 ] ; then
-	echo "Colibri iMX6 rootfs detected"
-	MODTYPE=colibri-imx6
-	# assumed minimal eMMC size [in sectors of 512]
-	EMMC_SIZE=$(expr 1024 \* 3500 \* 2)
-	IMAGEFILE=root.ext3
-	KERNEL_DEVICETREE="imx6dl-colibri-eval-v3.dtb imx6dl-colibri-cam-eval-v3.dtb"
-	LOCPATH="imx_flash"
-	OUT_DIR="$OUT_DIR/colibri_imx6"
-	U_BOOT_BINARY=u-boot.imx
-	U_BOOT_BINARY_IT=u-boot.imx
-else
-	CNT=`grep -ic "imx6" rootfs/etc/issue || true`
-	if [ "$CNT" -ge 1 ] ; then
-		echo "Apalis iMX6 rootfs detected"
-		MODTYPE=apalis-imx6
-		# assumed minimal eMMC size [in sectors of 512]
-		EMMC_SIZE=$(expr 1024 \* 3500 \* 2)
-		IMAGEFILE=root.ext3
-		KERNEL_DEVICETREE="imx6q-apalis-eval.dtb imx6q-apalis_v1_0-eval.dtb \
-		                   imx6q-apalis-ixora.dtb imx6q-apalis_v1_0-ixora.dtb "
-		LOCPATH="imx_flash"
-		OUT_DIR="$OUT_DIR/apalis_imx6"
-		U_BOOT_BINARY=u-boot.imx
-		U_BOOT_BINARY_IT=u-boot.imx-it
-	else
-		echo "can not detect module type from ./rootfs/etc/issue"
-		echo "exiting"
-		exit 1
-	fi
+# is there a yocto build?
+if [ ! -d "$YOCTO_IMAGE_PATH" ] ; then
+	echo "Yocto image not found"
+	exit 1
 fi
+
+sudo rm -rf $ROOTFSPATH
+mkdir $ROOTFSPATH
+
+sudo tar --extract --gzip --file $YOCTO_IMAGE_PATH/b2qt-embedded-qt5-image-apalis-imx6.tar.gz --directory $ROOTFSPATH
+
+echo "Apalis iMX6 rootfs"
+MODTYPE=apalis-imx6
+# assumed minimal eMMC size [in sectors of 512]
+EMMC_SIZE=$(expr 1024 \* 3500 \* 2)
+IMAGEFILE=root.ext3
+KERNEL_DEVICETREE="imx6q-apalis-ixora.dtb "
+LOCPATH="imx_flash"
+OUT_DIR="$OUT_DIR/apalis_imx6"
+U_BOOT_BINARY=u-boot.imx
+U_BOOT_BINARY_IT=u-boot.imx-it
+
 BINARIES=${MODTYPE}_bin
 
 #is only U-Boot to be copied to RAM?
 if [ "$UBOOT_RECOVERY" -ge 1 ] ; then
 	cd ${LOCPATH}
 	#the IT timings work for all modules, so use it during recovery
-	sudo ./imx_usb ../${BINARIES}/${U_BOOT_BINARY_IT}
+	sudo ./imx_usb ../${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY_IT}
 	exit 1
 fi
 
@@ -163,9 +156,9 @@ then
 fi
 
 #sanity check for existence of U-Boot and kernel
-[ -e ${BINARIES}/${U_BOOT_BINARY} ] || { echo "${BINARIES}/${U_BOOT_BINARY} does not exist"; exit 1; }
-[ -e ${BINARIES}/${U_BOOT_BINARY_IT} ] || { echo "${BINARIES}/${U_BOOT_BINARY_IT} does not exist"; exit 1; }
-[ -e ${BINARIES}/uImage ] || { echo "${BINARIES}/uImage does not exist"; exit 1; }
+[ -e ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY} ] || { echo "${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY} does not exist"; exit 1; }
+[ -e ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY_IT} ] || { echo "${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY_IT} does not exist"; exit 1; }
+[ -e ${YOCTO_IMAGE_PATH}/uImage ] || { echo "${YOCTO_IMAGE_PATH}/uImage does not exist"; exit 1; }
 
 #sanity check for some programs
 MCOPY=`sudo which mcopy`
@@ -183,11 +176,11 @@ sudo chown $USER: ${BINARIES}
 rm -f ${BINARIES}/versions.txt
 touch ${BINARIES}/versions.txt
 echo "Component Versions" > ${BINARIES}/versions.txt
-basename "`readlink -e ${BINARIES}/${U_BOOT_BINARY}`" >> ${BINARIES}/versions.txt
-basename "`readlink -e ${BINARIES}/${U_BOOT_BINARY_IT}`" >> ${BINARIES}/versions.txt
-basename "`readlink -e ${BINARIES}/uImage`" >> ${BINARIES}/versions.txt
+basename "`readlink -e ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY}`" >> ${BINARIES}/versions.txt
+basename "`readlink -e ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY_IT}`" >> ${BINARIES}/versions.txt
+basename "`readlink -e ${YOCTO_IMAGE_PATH}/uImage`" >> ${BINARIES}/versions.txt
 $ECHO -n "Rootfs " >> ${BINARIES}/versions.txt
-grep -i imx6 rootfs/etc/issue >> ${BINARIES}/versions.txt
+grep -i qt rootfs/etc/issue >> ${BINARIES}/versions.txt
 
 #create subdirectory for this module type
 sudo mkdir -p "$OUT_DIR"
@@ -247,20 +240,20 @@ echo "Creating VFAT partion image with the kernel"
 rm -f ${BINARIES}/boot.vfat
 ${MKFSVFAT} -n "${BOOTDD_VOLUME_ID}" -S 512 -C ${BINARIES}/boot.vfat $BOOT_BLOCKS 
 export MTOOLS_SKIP_CHECK=1
-mcopy -i ${BINARIES}/boot.vfat -s ${BINARIES}/uImage ::/uImage
+mcopy -i ${BINARIES}/boot.vfat -s ${YOCTO_IMAGE_PATH}/uImage ::/uImage
 
 # Copy device tree file
 COPIED=false
 if test -n "${KERNEL_DEVICETREE}"; then
 	for DTS_FILE in ${KERNEL_DEVICETREE}; do
 		DTS_BASE_NAME=`basename ${DTS_FILE} | awk -F "." '{print $1}'`
-		if [ -e "${BINARIES}/${KERNEL_IMAGETYPE}-${DTS_BASE_NAME}.dtb" ]; then
-			kernel_bin="`readlink ${BINARIES}/${KERNEL_IMAGETYPE}`"
-			kernel_bin_for_dtb="`readlink ${BINARIES}/${KERNEL_IMAGETYPE}-${DTS_BASE_NAME}.dtb | sed "s,$DTS_BASE_NAME,${MODTYPE},g;s,\.dtb$,.bin,g"`"
+		if [ -e "${YOCTO_IMAGE_PATH}/${KERNEL_IMAGETYPE}-${DTS_BASE_NAME}.dtb" ]; then
+			kernel_bin="`readlink ${YOCTO_IMAGE_PATH}/${KERNEL_IMAGETYPE}`"
+			kernel_bin_for_dtb="`readlink ${YOCTO_IMAGE_PATH}/${KERNEL_IMAGETYPE}-${DTS_BASE_NAME}.dtb | sed "s,$DTS_BASE_NAME,${MODTYPE},g;s,\.dtb$,.bin,g"`"
 			if [ "$kernel_bin" = "$kernel_bin_for_dtb" ]; then
-				mcopy -i ${BINARIES}/boot.vfat -s ${BINARIES}/${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${DTS_BASE_NAME}.dtb ::/${DTS_BASE_NAME}.dtb
+				mcopy -i ${BINARIES}/boot.vfat -s ${YOCTO_IMAGE_PATH}/${KERNEL_IMAGETYPE}-${DTS_BASE_NAME}.dtb ::/${DTS_BASE_NAME}.dtb
 				#copy also to out_dir
-				sudo cp ${BINARIES}/${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${DTS_BASE_NAME}.dtb "$OUT_DIR/${DTS_BASE_NAME}.dtb"
+				sudo cp ${YOCTO_IMAGE_PATH}/${KERNEL_IMAGETYPE}-${DTS_BASE_NAME}.dtb "$OUT_DIR/${DTS_BASE_NAME}.dtb"
 				COPIED=true
 			fi
 		fi
@@ -282,7 +275,7 @@ sudo $LOCPATH/genext3fs.sh -d rootfs -b ${EXT_SIZE} ${BINARIES}/${IMAGEFILE} || 
 
 
 #copy to $OUT_DIR
-sudo cp ${BINARIES}/${U_BOOT_BINARY} ${BINARIES}/${U_BOOT_BINARY_IT} ${BINARIES}/uImage ${BINARIES}/mbr.bin ${BINARIES}/boot.vfat \
+sudo cp ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY} ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY_IT} ${YOCTO_IMAGE_PATH}/uImage ${BINARIES}/mbr.bin ${BINARIES}/boot.vfat \
 	${BINARIES}/${IMAGEFILE} ${BINARIES}/flash*.img ${BINARIES}/versions.txt "$OUT_DIR"
 sudo cp ${BINARIES}/fwd_blk.img "$OUT_DIR/../flash_blk.img"
 sudo cp ${BINARIES}/fwd_eth.img "$OUT_DIR/../flash_eth.img"
@@ -294,6 +287,8 @@ if [ "$SPLIT" -ge 1 ] ; then
 sudo split -a 2 -b `expr 64 \* 1024 \* 1024` --numeric-suffixes=10 "$OUT_DIR/root.ext3" "$OUT_DIR/root.ext3-"
 fi
 sync
+
+sudo rm -rf $ROOTFSPATH
 
 echo "Successfully copied data to target folder."
 echo ""
