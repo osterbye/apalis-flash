@@ -118,7 +118,7 @@ fi
 sudo rm -rf $ROOTFSPATH
 mkdir $ROOTFSPATH
 
-sudo tar --extract --gzip --file $YOCTO_IMAGE_PATH/b2qt-embedded-qt5-image-apalis-imx6.tar.gz --directory $ROOTFSPATH
+sudo tar --extract --gzip --file $YOCTO_IMAGE_PATH/spiri-image-apalis-imx6.tar.gz --directory $ROOTFSPATH
 
 echo "Apalis iMX6 rootfs"
 MODTYPE=apalis-imx6
