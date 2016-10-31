@@ -275,11 +275,16 @@ sudo $LOCPATH/genext3fs.sh -d rootfs -b ${EXT_SIZE} ${BINARIES}/${IMAGEFILE} || 
 
 
 #copy to $OUT_DIR
-sudo cp ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY} ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY_IT} ${YOCTO_IMAGE_PATH}/uImage ${BINARIES}/mbr.bin ${BINARIES}/boot.vfat \
+sudo rsync --progress ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY} ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY_IT} ${YOCTO_IMAGE_PATH}/uImage ${BINARIES}/mbr.bin ${BINARIES}/boot.vfat \
 	${BINARIES}/${IMAGEFILE} ${BINARIES}/flash*.img ${BINARIES}/versions.txt "$OUT_DIR"
-sudo cp ${BINARIES}/fwd_blk.img "$OUT_DIR/../flash_blk.img"
-sudo cp ${BINARIES}/fwd_eth.img "$OUT_DIR/../flash_eth.img"
-sudo cp ${BINARIES}/fwd_mmc.img "$OUT_DIR/../flash_mmc.img"
+sudo rsync --progress ${BINARIES}/fwd_blk.img "$OUT_DIR/../flash_blk.img"
+sudo rsync --progress ${BINARIES}/fwd_eth.img "$OUT_DIR/../flash_eth.img"
+sudo rsync --progress ${BINARIES}/fwd_mmc.img "$OUT_DIR/../flash_mmc.img"
+#sudo cp ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY} ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY_IT} ${YOCTO_IMAGE_PATH}/uImage ${BINARIES}/mbr.bin ${BINARIES}/boot.vfat \
+#	${BINARIES}/${IMAGEFILE} ${BINARIES}/flash*.img ${BINARIES}/versions.txt "$OUT_DIR"
+#sudo cp ${BINARIES}/fwd_blk.img "$OUT_DIR/../flash_blk.img"
+#sudo cp ${BINARIES}/fwd_eth.img "$OUT_DIR/../flash_eth.img"
+#sudo cp ${BINARIES}/fwd_mmc.img "$OUT_DIR/../flash_mmc.img"
 #cleanup intermediate files
 sudo rm ${BINARIES}/mbr.bin ${BINARIES}/boot.vfat ${BINARIES}/${IMAGEFILE} ${BINARIES}/versions.txt
 
