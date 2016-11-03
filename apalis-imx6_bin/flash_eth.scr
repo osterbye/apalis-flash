@@ -12,7 +12,7 @@ setenv migrate_uboot 'tftpboot ${loadaddr} ${board_name}/u-boot${module_type}.im
 
 setenv cp_file_chunk 'tftpboot ${loadaddr} ${board_name}/root.ext3-${filenum}; run set_blkcnt; mmc dev 0 0 && mmc write ${loadaddr} ${blkstart} ${blkcnt}'
 
-setenv update_uboot 'tftpboot ${loadaddr} ${board_name}/u-boot${module_type}.imx && run set_blkcnt && mmc dev 0 1 && mmc write ${loadaddr} 2 ${blkcnt} && mmc bootbus 0 2 1 2 && mmc partconf 0 1 1 0'
+setenv update_uboot 'tftpboot ${loadaddr} ${board_name}/u-boot.imx${module_type} && run set_blkcnt && mmc dev 0 1 && mmc write ${loadaddr} 2 ${blkcnt} && mmc bootbus 0 2 1 2 && mmc partconf 0 1 1 0'
 setenv update_uboot_it 'setenv module_type -it; run update_uboot'
 
 setenv update_kernel 'tftpboot ${loadaddr} ${board_name}/uImage && fatwrite mmc 0:1 ${loadaddr} uImage ${filesize}'

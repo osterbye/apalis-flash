@@ -275,7 +275,7 @@ sudo $LOCPATH/genext3fs.sh -d rootfs -b ${EXT_SIZE} ${BINARIES}/${IMAGEFILE} || 
 
 
 #copy to $OUT_DIR
-sudo rsync --progress ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY} ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY_IT} ${YOCTO_IMAGE_PATH}/uImage ${BINARIES}/mbr.bin ${BINARIES}/boot.vfat \
+sudo cp ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY} ${YOCTO_IMAGE_PATH}/${U_BOOT_BINARY_IT} ${YOCTO_IMAGE_PATH}/uImage ${BINARIES}/mbr.bin ${BINARIES}/boot.vfat \
 	${BINARIES}/${IMAGEFILE} ${BINARIES}/flash*.img ${BINARIES}/versions.txt "$OUT_DIR"
 sudo rsync --progress ${BINARIES}/fwd_blk.img "$OUT_DIR/../flash_blk.img"
 sudo rsync --progress ${BINARIES}/fwd_eth.img "$OUT_DIR/../flash_eth.img"
@@ -285,6 +285,22 @@ sudo rm ${BINARIES}/mbr.bin ${BINARIES}/boot.vfat ${BINARIES}/${IMAGEFILE} ${BIN
 
 if [ "$SPLIT" -ge 1 ] ; then
 sudo split -a 2 -b `expr 64 \* 1024 \* 1024` --numeric-suffixes=10 "$OUT_DIR/root.ext3" "$OUT_DIR/root.ext3-"
+
+#transmogrify filenames to accomodate uboot hex aritmetic
+set +e
+sudo mkdir "$OUT_DIR/tmp"
+set -e
+sudo mv $OUT_DIR/root.ext3-* $OUT_DIR/tmp/
+echo "moved files to tmp"
+
+for FILE in `ls "$OUT_DIR/tmp"`
+    do
+        FILENUM=`printf $FILE | tail -c 2`
+	FILENUMRESULT=$((($FILENUM - 10) + 16))
+	echo $FILE\n
+	sudo mv "$OUT_DIR/tmp/$FILE" $OUT_DIR/root.ext3-`printf "%02x" $FILENUMRESULT`
+    done
+sudo rmdir "$OUT_DIR/tmp"
 fi
 sync
 
