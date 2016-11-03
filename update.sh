@@ -291,13 +291,11 @@ set +e
 sudo mkdir "$OUT_DIR/tmp"
 set -e
 sudo mv $OUT_DIR/root.ext3-* $OUT_DIR/tmp/
-echo "moved files to tmp"
 
 for FILE in `ls "$OUT_DIR/tmp"`
     do
         FILENUM=`printf $FILE | tail -c 2`
 	FILENUMRESULT=$((($FILENUM - 10) + 16))
-	echo $FILE\n
 	sudo mv "$OUT_DIR/tmp/$FILE" $OUT_DIR/root.ext3-`printf "%02x" $FILENUMRESULT`
     done
 sudo rmdir "$OUT_DIR/tmp"
