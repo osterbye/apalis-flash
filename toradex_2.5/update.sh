@@ -75,7 +75,7 @@ UBOOT_RECOVERY=0
 # No devicetree by default
 KERNEL_DEVICETREE=""
 KERNEL_IMAGETYPE="uImage"
-YOCTO_IMAGE_PATH=../tmp/deploy/images/apalis-imx6
+YOCTO_IMAGE_PATH=../../tmp/deploy/images/apalis-imx6
 
 while getopts "cdfho:" Option ; do
 	case $Option in
