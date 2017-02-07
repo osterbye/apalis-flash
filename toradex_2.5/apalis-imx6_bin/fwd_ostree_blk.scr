@@ -1,6 +1,0 @@
-#the update.sh script renames this. fwd_ostree_blk.scr -> ../flash_blk.img
-test -n ${interface} || setenv interface mmc
-test -n ${drive} || setenv drive 1
-
-test -n ${board_name} || echo "board_name env not set!" && exit
-fatload ${interface} ${drive}:1 ${loadaddr} ${board_name}/flash_ostree_blk.img && source ${loadaddr}
